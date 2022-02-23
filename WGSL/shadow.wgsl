@@ -11,7 +11,7 @@ struct ShadowData {
      radius:f32;
      dump:f32;
      vp:array<mat4x4<f32>, 4>;
-     cascadeSplits:array<f32, 4>;
+     cascadeSplits:vec4<f32>;
 };
 
 fn textureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
