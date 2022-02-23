@@ -31,15 +31,15 @@ fn cubeTextureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,
     var faceIndex = 0;
     if (abs(direction.x - 1.0) < 1.0e-3) {
         faceIndex = 0;
-    } else if (abs(direction.x + 1) < 1.0e-3) {
+    } else if (abs(direction.x + 1.0) < 1.0e-3) {
         faceIndex = 1;
-    }  else if (abs(direction.y - 1) < 1.0e-3) {
+    }  else if (abs(direction.y - 1.0) < 1.0e-3) {
         faceIndex = 2;
-    } else if (abs(direction.y + 1) < 1.0e-3) {
+    } else if (abs(direction.y + 1.0) < 1.0e-3) {
         faceIndex = 3;
-    } else if (abs(direction.z - 1) < 1.0e-3) {
+    } else if (abs(direction.z - 1.0) < 1.0e-3) {
         faceIndex = 4;
-    } else if (abs(direction.z + 1) < 1.0e-3) {
+    } else if (abs(direction.z + 1.0) < 1.0e-3) {
         faceIndex = 5;
     }
     
