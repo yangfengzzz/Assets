@@ -36,7 +36,7 @@ fn textureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
     xy.y = 1.0 - xy.y;
     xy = xy * scale;
     var shadow_sample = textureSampleCompare(u_shadowMap, u_shadowSampler, xy + off + offsets[cascadeIndex], index, shadowCoord.z / shadowCoord.w);
-    return shadow_sample * u_shadowData.intensity;
+    return select(1.0, u_shadowData.intensity, shadow_sample < 1.0);
 }
 
 fn filterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
@@ -71,7 +71,7 @@ fn filterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
             var shadow_sample = textureSampleCompare(u_shadowMap, u_shadowSampler, 
                                                     xy + vec2<f32>(x, y) * texelSize + offsets[cascadeIndex], 
                                                     index, shadowCoord.z / shadowCoord.w);
-            total = total + shadow_sample * u_shadowData.intensity;
+            total = total + select(1.0, u_shadowData.intensity, shadow_sample < 1.0);
         }
     }
     return total / neighbors;

@@ -50,7 +50,7 @@ fn cubeTextureProj( worldPos:vec3<f32>, off:vec2<f32>, u_cubeShadowData: CubeSha
     var dir = convertUVToDirection(faceIndex, xy + off);
     
     var shadow_sample = textureSampleCompare(u_cubeShadowMap, u_cubeShadowSampler, dir, index, shadowCoord.z / shadowCoord.w);
-    return shadow_sample * u_cubeShadowData.intensity;
+    return select(1.0, u_cubeShadowData.intensity, shadow_sample < 1.0);
 }
 
 fn cubeFilterPCF( worldPos:vec3<f32>,  u_cubeShadowData: CubeShadowData, index: i32,
@@ -88,7 +88,7 @@ fn cubeFilterPCF( worldPos:vec3<f32>,  u_cubeShadowData: CubeShadowData, index: 
         for (var y = -neighborWidth; y <= neighborWidth; y = y + 1.0) {
             var dir = convertUVToDirection(faceIndex, xy + vec2<f32>(x, y) * texelSize);
             var shadow_sample = textureSampleCompare(u_cubeShadowMap, u_cubeShadowSampler, dir, index, shadowCoord.z / shadowCoord.w);
-            total = total + shadow_sample * u_cubeShadowData.intensity;
+            total = total + select(1.0, u_cubeShadowData.intensity, shadow_sample < 1.0);
         }
     }
     return total / neighbors;
