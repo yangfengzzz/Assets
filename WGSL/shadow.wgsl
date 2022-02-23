@@ -35,10 +35,10 @@ fn textureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
 
     var shadowCoord:vec4<f32> = u_shadowData[index].vp[cascadeIndex] * vec4<f32>(worldPos, 1.0);
     var xy = shadowCoord.xy;
-    xy /= shadowCoord.w;
+    xy = xy / shadowCoord.w;
     xy = xy * 0.5 + 0.5;
     xy.y = 1.0 - xy.y;
-    xy *= scale;
+    xy = xy * scale;
     var shadow_sample = textureSampleCompare(u_shadowMap, u_shadowSampler, xy + off + offsets[cascadeIndex], index, shadowCoord.z / shadowCoord.w);
     return shadow_sample * u_shadowData[index].intensity;
 }
@@ -59,10 +59,10 @@ fn filterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
     
     var shadowCoord = u_shadowData[index].vp[cascadeIndex] * vec4<f32>(worldPos, 1.0);
     var xy = shadowCoord.xy;
-    xy /= shadowCoord.w;
+    xy = xy / shadowCoord.w;
     xy = xy * 0.5 + 0.5;
     xy.y = 1.0 - xy.y;
-    xy *= scale;
+    xy = xy * scale;
     
     let neighborWidth = 3.0;
     let neighbors = (neighborWidth * 2.0 + 1.0) * (neighborWidth * 2.0 + 1.0);
@@ -74,7 +74,7 @@ fn filterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
             var shadow_sample = textureSampleCompare(u_shadowMap, u_shadowSampler, 
                                                     xy + vec2<f32>(x, y) * texelSize + offsets[cascadeIndex], 
                                                     index, shadowCoord.z / shadowCoord.w);
-            total += shadow_sample * u_shadowData[index].intensity;
+            total = total + shadow_sample * u_shadowData[index].intensity;
         }
     }
     return total / neighbors;
