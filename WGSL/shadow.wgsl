@@ -14,50 +14,47 @@ struct ShadowData {
      cascadeSplits:array<f32, 4>;
 };
 
-// @group(0) @binding(12)
-// var<uniform> u_shadowData: array<ShadowData, 1>;
-// @group(0) @binding(15) var u_shadowMap: texture_depth_2d_array;
-// @group(0) @binding(16) var u_shadowSampler: sampler_comparison;
-
 fn textureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
-                   index:i32)->f32 {
+                u_shadowData: ShadowData, index: i32,
+                u_shadowMap: texture_depth_2d_array, u_shadowSampler: sampler_comparison)->f32 {
     // Get cascade index for the current fragment's view position
     var cascadeIndex:i32 = 0;
     var scale:f32 = 1.0;
-    if (u_shadowData[index].cascadeSplits[0] * u_shadowData[index].cascadeSplits[1] > 0.0) {
+    if (u_shadowData.cascadeSplits[0] * u_shadowData.cascadeSplits[1] > 0.0) {
         scale = 0.5;
         for(var i:i32 = 0; i < 4 - 1; i = i+1) {
-            if(viewPos.z < u_shadowData[index].cascadeSplits[i]) {
+            if(viewPos.z < u_shadowData.cascadeSplits[i]) {
                 cascadeIndex = i + 1;
             }
         }
     }
 
-    var shadowCoord:vec4<f32> = u_shadowData[index].vp[cascadeIndex] * vec4<f32>(worldPos, 1.0);
+    var shadowCoord:vec4<f32> = u_shadowData.vp[cascadeIndex] * vec4<f32>(worldPos, 1.0);
     var xy = shadowCoord.xy;
     xy = xy / shadowCoord.w;
     xy = xy * 0.5 + 0.5;
     xy.y = 1.0 - xy.y;
     xy = xy * scale;
     var shadow_sample = textureSampleCompare(u_shadowMap, u_shadowSampler, xy + off + offsets[cascadeIndex], index, shadowCoord.z / shadowCoord.w);
-    return shadow_sample * u_shadowData[index].intensity;
+    return shadow_sample * u_shadowData.intensity;
 }
 
 fn filterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
-                 index:i32)->f32 {
+              u_shadowData: ShadowData, index: i32,
+              u_shadowMap: texture_depth_2d_array, u_shadowSampler: sampler_comparison)->f32 {
     // Get cascade index for the current fragment's view position
     var cascadeIndex = 0;
     var scale = 1.0;
-    if (u_shadowData[index].cascadeSplits[0] * u_shadowData[index].cascadeSplits[1] > 0.0) {
+    if (u_shadowData.cascadeSplits[0] * u_shadowData.cascadeSplits[1] > 0.0) {
         scale = 0.5;
         for(var i = 0; i < 4 - 1; i = i + 1) {
-            if(viewPos.z < u_shadowData[index].cascadeSplits[i]) {
+            if(viewPos.z < u_shadowData.cascadeSplits[i]) {
                 cascadeIndex = i + 1;
             }
         }
     }
     
-    var shadowCoord = u_shadowData[index].vp[cascadeIndex] * vec4<f32>(worldPos, 1.0);
+    var shadowCoord = u_shadowData.vp[cascadeIndex] * vec4<f32>(worldPos, 1.0);
     var xy = shadowCoord.xy;
     xy = xy / shadowCoord.w;
     xy = xy * 0.5 + 0.5;
@@ -74,7 +71,7 @@ fn filterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
             var shadow_sample = textureSampleCompare(u_shadowMap, u_shadowSampler, 
                                                     xy + vec2<f32>(x, y) * texelSize + offsets[cascadeIndex], 
                                                     index, shadowCoord.z / shadowCoord.w);
-            total = total + shadow_sample * u_shadowData[index].intensity;
+            total = total + shadow_sample * u_shadowData.intensity;
         }
     }
     return total / neighbors;

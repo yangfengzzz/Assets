@@ -7,11 +7,6 @@ struct CubeShadowData {
      lightPos:vec3<f32>;
 };
 
-// @group(0) @binding(12)
-// var<uniform> u_cubeShadowData: array<CubeShadowData, 1>;
-// @group(0) @binding(15) var u_cubeShadowMap: texture_depth_cube_array;
-// @group(0) @binding(16) var u_cubeShadowSampler: sampler_comparison;
-
 fn convertUVToDirection( face:i32,  uv:vec2<f32>)->vec3<f32> {
     var u = 2.0 * uv.x - 1.0;
     var v = -2.0 * uv.y + 1.0;
@@ -27,9 +22,10 @@ fn convertUVToDirection( face:i32,  uv:vec2<f32>)->vec3<f32> {
     return offsets[face];
 }
 
-fn cubeTextureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
-                       index:i32)->f32 {
-    var direction = worldPos - u_cubeShadowData[index].lightPos;
+fn cubeTextureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  
+                    off:vec2<f32>, u_cubeShadowData: CubeShadowData, index: i32,
+                    u_cubeShadowMap: texture_depth_cube_array, u_cubeShadowSampler: sampler_comparison)->f32 {
+    var direction = worldPos - u_cubeShadowData.lightPos;
     var scale = 1.0 / max(max(abs(direction.x), abs(direction.y)), abs(direction.z));
     direction = direction * scale;
     var faceIndex = 0;
@@ -47,7 +43,7 @@ fn cubeTextureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
         faceIndex = 5;
     }
     
-    var shadowCoord = u_cubeShadowData[index].vp[faceIndex] * vec4<f32>(worldPos, 1.0);
+    var shadowCoord = u_cubeShadowData.vp[faceIndex] * vec4<f32>(worldPos, 1.0);
     var xy = shadowCoord.xy;
     xy = xy / shadowCoord.w;
     xy = xy * 0.5 + 0.5;
@@ -55,12 +51,13 @@ fn cubeTextureProj( worldPos:vec3<f32>,  viewPos:vec3<f32>,  off:vec2<f32>,
     var dir = convertUVToDirection(faceIndex, xy + off);
     
     var shadow_sample = textureSampleCompare(u_cubeShadowMap, u_cubeShadowSampler, dir, index, shadowCoord.z / shadowCoord.w);
-    return shadow_sample * u_cubeShadowData[index].intensity;
+    return shadow_sample * u_cubeShadowData.intensity;
 }
 
 fn cubeFilterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
-                     index:i32)->f32 {
-    var direction = worldPos - u_cubeShadowData[index].lightPos;
+                  u_cubeShadowData: CubeShadowData, index: i32,
+                  u_cubeShadowMap: texture_depth_cube_array, u_cubeShadowSampler: sampler_comparison)->f32 {
+    var direction = worldPos - u_cubeShadowData.lightPos;
     var scale = 1.0 / max(max(abs(direction.x), abs(direction.y)), abs(direction.z));
     direction = direction * scale;
     var faceIndex = 0;
@@ -78,7 +75,7 @@ fn cubeFilterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
         faceIndex = 5;
     }
     
-    var shadowCoord = u_cubeShadowData[index].vp[faceIndex] * vec4<f32>(worldPos, 1.0);
+    var shadowCoord = u_cubeShadowData.vp[faceIndex] * vec4<f32>(worldPos, 1.0);
     var xy = shadowCoord.xy;
     xy = xy / shadowCoord.w;
     xy = xy * 0.5 + 0.5;
@@ -93,7 +90,7 @@ fn cubeFilterPCF( worldPos:vec3<f32>,  viewPos:vec3<f32>,
         for (var y = -neighborWidth; y <= neighborWidth; y = y + 1.0) {
             var dir = convertUVToDirection(faceIndex, xy + vec2<f32>(x, y) * texelSize);
             var shadow_sample = textureSampleCompare(u_cubeShadowMap, u_cubeShadowSampler, dir, index, shadowCoord.z / shadowCoord.w);
-            total = total + shadow_sample * u_cubeShadowData[index].intensity;
+            total = total + shadow_sample * u_cubeShadowData.intensity;
         }
     }
     return total / neighbors;
