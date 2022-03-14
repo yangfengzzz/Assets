@@ -53,9 +53,9 @@ fn sample_potential(p:vec3<f32>, uPerlinNoisePermutationSeed:f32)->vec3<f32> {
         let n = noise3d(s, uPerlinNoisePermutationSeed);
         
         match_boundary(inv_noise_scale, distance, normal, &psi);
-        psi += height_factor * noise_gain * n;
+        psi = psi + height_factor * noise_gain * n;
 
-        noise_gain = noise_gain * 0.5
+        noise_gain = noise_gain * 0.5;
     }
     
     // [ add custom potentials ]
@@ -97,7 +97,7 @@ fn compute_curl(p: vec3<f32>, uPerlinNoisePermutationSeed: f32) -> vec3<f32> {
     v.x = p11.z - p10.z - p21.y + p20.y;
     v.y = p21.x - p20.x - p01.z + p00.z;
     v.z = p01.y - p00.y - p11.x + p10.x;
-    v /= (2.0*eps);
+    v = v / (2.0*eps);
     
     return v;
 }

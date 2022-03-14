@@ -25,11 +25,11 @@ counter: atomic<u32>;
  @group(0) @binding(22)
  var<storage, read_write> u_writeAtomicBuffer: Counter;
  @group(0) @binding(23)
- var<storage, read_write> u_readConsumeBuffer: array<TParticle, 1024>;
+ var<storage, read_write> u_readConsumeBuffer: array<TParticle, 32768>;
  @group(0) @binding(24)
- var<storage, read_write> u_writeConsumeBuffer: array<TParticle, 1024>;
+ var<storage, read_write> u_writeConsumeBuffer: array<TParticle, 32768>;
  @group(0) @binding(16)
- var<uniform> u_randomBuffer: array<vec4<f32>, 512>;
+ var<uniform> u_randomBuffer: array<vec4<f32>, 256>;
  fn pi() -> f32 {
     return 3.141564;
 }
@@ -456,9 +456,9 @@ fn sample_potential(p:vec3<f32>, uPerlinNoisePermutationSeed:f32)->vec3<f32> {
         let n = noise3d(s, uPerlinNoisePermutationSeed);
         
         match_boundary(inv_noise_scale, distance, normal, &psi);
-        psi += height_factor * noise_gain * n;
+        psi = psi + height_factor * noise_gain * n;
 
-        noise_gain = noise_gain * 0.5
+        noise_gain = noise_gain * 0.5;
     }
     
     // [ add custom potentials ]
@@ -500,7 +500,7 @@ fn compute_curl(p: vec3<f32>, uPerlinNoisePermutationSeed: f32) -> vec3<f32> {
     v.x = p11.z - p10.z - p21.y + p20.y;
     v.y = p21.x - p20.x - p01.z + p00.z;
     v.z = p01.y - p00.y - p11.x + p10.x;
-    v /= (2.0*eps);
+    v = v / (2.0*eps);
     
     return v;
 }fn opUnion(d1: f32, d2: f32) -> f32 {
@@ -567,10 +567,10 @@ fn compute_gradient(p: vec3<f32>, normal: ptr<function, vec3<f32> >) -> f32 {
     (*normal) = normalize(*normal);
     
     return d;
-}fn popParticle(index: u32) -> TParticle {{
+}fn popParticle(index: u32) -> TParticle {
     atomicSub(&u_readAtomicBuffer.counter, 1u);
     return u_readConsumeBuffer[index];
-}}
+}
 fn pushParticle(p: TParticle) {
     let index = atomicAdd(&u_writeAtomicBuffer.counter, 1u);
     u_writeConsumeBuffer[index] = p;
@@ -579,12 +579,12 @@ fn updatedAge(p: TParticle, uTimeStep: f32) -> f32 {
     return clamp(p.age - uTimeStep, 0.0, p.start_age);
 }
 fn updateParticle(p: ptr<function, TParticle>, pos: vec3<f32>, vel: vec3<f32>, age: f32) {
-    (*p).position.xyz = pos;
-    (*p).velocity.xyz = vel;
+    (*p).position = vec4<f32>(pos, (*p).position.w);
+    (*p).velocity = vec4<f32>(vel, (*p).velocity.w);
     (*p).age = age;
 }
-fn calculateScattering(gid:u32)->vec3<f32> {
-    var randforce = vec3<f32>(u_randomBuffer[gid], u_randomBuffer[gid+1u], u_randomBuffer[gid+2u]);
+fn calculateScattering(global_id:u32)->vec3<f32> {
+    var randforce = vec3<f32>(u_randomBuffer[global_id / 256u].x, u_randomBuffer[global_id / 256u].y, u_randomBuffer[global_id / 256u].z);
     randforce = 2.0 * randforce - 1.0;
     return u_simulationData.scatteringFactor * randforce;
 }
@@ -597,9 +597,9 @@ fn calculateTargetMesh(p:TParticle)->vec3<f32> {
     return pull;
 }
 fn calculateVectorField(p:TParticle,
-                             uVectorFieldFactor:f32,
-                            uVectorFieldTexture:texture_3d<f32>,
-                             uVectorFieldSampler:sampler) {
+                        uVectorFieldFactor:f32,
+                        uVectorFieldTexture:texture_3d<f32>,
+                        uVectorFieldSampler:sampler)->vec3<f32> {
     let dim = textureDimensions(uVectorFieldTexture);    let extent = vec3<f32>(0.5 * f32(dim.x), 0.5 * f32(dim.y), 0.5 * f32(dim.z));
     let texcoord = (p.position.xyz + extent) / (2.0 * extent);
     let vfield = textureSample(uVectorFieldTexture, uVectorFieldSampler, texcoord).xyz;
@@ -624,7 +624,7 @@ fn collideSphere(r:f32, center:vec3<f32>, pos: ptr<function, vec3<f32> >, vel: p
     }
 }
 fn collideBox(corner:vec3<f32>, center:vec3<f32>, pos: ptr<function, vec3<f32> >, vel: ptr<function, vec3<f32> >) {
-    let p = *pos - center;
+    var p = *pos - center;
     
     if (p.x < -corner.x) {
         p.x = -corner.x;
@@ -665,14 +665,14 @@ fn collisionHandling(pos: ptr<function, vec3<f32> >, vel: ptr<function, vec3<f32
         collideSphere(r, vec3<f32>(0.0), pos, vel);
     } else {
         if (u_simulationData.boundingVolumeType == 1) {
-            collideBox(vec3<f32>(r), vec3<f32>(0.0), pos, vel); {
+            collideBox(vec3<f32>(r), vec3<f32>(0.0), pos, vel);
         }
     }
 }
 @stage(compute) @workgroup_size(256, 1, 1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>,
 ) {
-    let p = popParticle(gid);
+    var p = popParticle(global_id.x);
     
     let age = updatedAge(p, u_simulationData.timeStep);
     
@@ -680,10 +680,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>,
         // Calculate external forces.
         var force = vec3<f32>(0.0);
         
-        force += calculateScattering(gid);
-        force += calculateRepulsion(p);
-        force += calculateTargetMesh(p);
-        force += calculateCurlNoise(p);
+        force = force + calculateScattering(global_id.x);
+        force = force + calculateRepulsion(p);
+        force = force + calculateTargetMesh(p);
+        force = force + calculateCurlNoise(p);
         let dt = vec3<f32>(u_simulationData.timeStep);
         var velocity = p.velocity.xyz;
         var position = p.position.xyz;
@@ -697,7 +697,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>,
         collisionHandling(&position, &velocity);
         
         // Update the particle.
-        updateParticle(p, position, velocity, age);
+        updateParticle(&p, position, velocity, age);
         
         // Save it in buffer.
         pushParticle(p);
