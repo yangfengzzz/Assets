@@ -2,7 +2,7 @@ fn sample_distance(p: vec3<f32>) -> f32 {
     return p.y; //sdSphere(p - vec3(30.0f, 110.0f, 0.0f), 64.0);
 }
 
-fn compute_gradient(p: vec3<f32>, normal: ptr<private, vec3<f32> >) -> f32 {
+fn compute_gradient(p: vec3<f32>, normal: ptr<function, vec3<f32> >) -> f32 {
     let d = sample_distance(p);
     
     let eps = vec2<f32>(0.01, 0.0);

@@ -8,9 +8,9 @@ fn ramp(x: f32) -> f32 {
 }
 
 fn noise3d(seed: vec3<f32>, uPerlinNoisePermutationSeed: f32) -> vec3<f32> {
-    return vec3<f32>(pnoise(seed, uPerlinNoisePermutationSeed),
-                  pnoise(seed + vec3<f32>(31.416, -47.853, 12.793), uPerlinNoisePermutationSeed),
-                  pnoise(seed + vec3<f32>(-233.145, -113.408, -185.31), uPerlinNoisePermutationSeed));
+    return vec3<f32>(pnoise3D(seed, uPerlinNoisePermutationSeed),
+                  pnoise3D(seed + vec3<f32>(31.416, -47.853, 12.793), uPerlinNoisePermutationSeed),
+                  pnoise3D(seed + vec3<f32>(-233.145, -113.408, -185.31), uPerlinNoisePermutationSeed));
 }
 
 fn match_boundary(inv_noise_scale: f32, d: f32, normal: vec3<f32>, psi: ptr<function, vec3<f32> >) {
@@ -28,7 +28,7 @@ fn sample_potential(p:vec3<f32>, uPerlinNoisePermutationSeed:f32)->vec3<f32> {
     
     // Compute normal and retrieve distance from colliders.
     var normal = vec3<f32>(0.0);
-    let distance = compute_gradient(p, normal);
+    let distance = compute_gradient(p, &normal);
     
 
     // let PlumeCeiling = 0.0;
